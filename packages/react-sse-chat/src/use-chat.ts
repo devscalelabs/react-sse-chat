@@ -43,8 +43,11 @@ function defaultOnEvent(event: SSEEvent, helpers: EventHelpers<ContentPart>): vo
 // useChat
 // ---------------------------------------------------------------------------
 
-export function useChat<TPart extends { type: string } = ContentPart>(
-  options: UseChatOptions<TPart>,
+export function useChat<
+  TPart extends { type: string } = ContentPart,
+  TEvent extends { type: string } = SSEEvent,
+>(
+  options: UseChatOptions<TPart, TEvent>,
 ): UseChatReturn<TPart> {
   const { api, headers, body, initialMessages, onEvent, onMessage, onError, onFinish } =
     options;
@@ -141,7 +144,7 @@ export function useChat<TPart extends { type: string } = ContentPart>(
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const eventHandler = onEvent ?? (defaultOnEvent as unknown as (event: SSEEvent, helpers: EventHelpers<TPart>) => void);
+      const eventHandler = onEvent ?? (defaultOnEvent as unknown as (event: TEvent, helpers: EventHelpers<TPart>) => void);
       const helpers: EventHelpers<TPart> = { appendText, appendPart, setMessages };
 
       // Fire-and-forget async IIFE — state is managed via React setState.
@@ -171,7 +174,7 @@ export function useChat<TPart extends { type: string } = ContentPart>(
             response.body,
             controller.signal,
           )) {
-            eventHandler(event, helpers);
+            eventHandler(event as unknown as TEvent, helpers);
           }
 
           // Stream finished — notify via callbacks.

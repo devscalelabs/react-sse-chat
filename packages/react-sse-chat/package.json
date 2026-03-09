@@ -1,6 +1,6 @@
 {
   "name": "@devscalelabs/react-sse-chat",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A lightweight React hook for consuming Server-Sent Events (SSE) from AI chat backends",
   "type": "module",
   "main": "./dist/index.cjs",

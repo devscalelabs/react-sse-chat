@@ -65,7 +65,10 @@ export interface EventHelpers<TPart extends { type: string } = ContentPart> {
 // Hook Options
 // ---------------------------------------------------------------------------
 
-export interface UseChatOptions<TPart extends { type: string } = ContentPart> {
+export interface UseChatOptions<
+  TPart extends { type: string } = ContentPart,
+  TEvent extends { type: string } = SSEEvent,
+> {
   /** SSE endpoint URL. */
   api: string;
 
@@ -82,8 +85,11 @@ export interface UseChatOptions<TPart extends { type: string } = ContentPart> {
    * Custom handler for each SSE event. When provided, this **replaces** the
    * default `text_delta` handling — giving you full control over how events
    * are mapped to message state.
+   *
+   * The `event` parameter is typed as `TEvent`, which defaults to `SSEEvent`.
+   * Pass a custom event union as the second generic to handle additional event types.
    */
-  onEvent?: (event: SSEEvent, helpers: EventHelpers<TPart>) => void;
+  onEvent?: (event: TEvent, helpers: EventHelpers<TPart>) => void;
 
   /** Called when the assistant message is complete (stream ended). */
   onFinish?: (messages: Message<TPart>[]) => void;

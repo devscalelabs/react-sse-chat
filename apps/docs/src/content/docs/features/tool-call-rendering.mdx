@@ -168,4 +168,4 @@ interface ToolCallPart {
 }
 ```
 
-If you need additional fields (e.g. `tool_call_id`, `status`), see [Custom Event Handling](/extending/custom-events) for defining custom part types with generics.
+If you need additional fields (e.g. `tool_call_id`, `status`), or your backend sends custom event types beyond `text_delta` and `tool_call`, see [Custom Event Handling](/extending/custom-events) for extending both part types and event types with generics.

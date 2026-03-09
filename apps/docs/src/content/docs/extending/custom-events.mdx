@@ -96,25 +96,25 @@ Each message contains a `parts` array. Render them by switching on `part.type`:
 ))}
 ```
 
-## Custom Part Types
+## Custom Event Types
 
-The hook accepts a generic parameter so you can define your own content part types. Your custom type must extend `{ type: string }`:
+The hook accepts a second generic parameter `TEvent` for custom SSE event types. Your backend might send events beyond `text_delta` and `tool_call` — for example, `error`, `thinking`, or `status` events. Define your custom event types and pass them as the second generic:
 
 ```tsx
 import { useChat } from "@devscalelabs/react-sse-chat";
-import type { ContentPart } from "@devscalelabs/react-sse-chat";
+import type { SSEEvent } from "@devscalelabs/react-sse-chat";
 
-// Define your custom part
-interface ThinkingPart {
-  type: "thinking";
-  text: string;
+// Define your custom event
+interface ErrorEvent {
+  type: "error";
+  message: string;
 }
 
-// Union with the built-in parts
-type MyPart = ContentPart | ThinkingPart;
+// Union with the built-in events
+type MyEvent = SSEEvent | ErrorEvent;
 
 function Chat() {
-  const { messages } = useChat<MyPart>({
+  const { messages } = useChat<ContentPart, MyEvent>({
     api: "/chat",
     onEvent: (event, helpers) => {
       switch (event.type) {
@@ -126,6 +126,61 @@ function Chat() {
             type: "tool_call",
             tool_name: event.tool_name,
             argument: event.argument,
+          });
+          break;
+        case "error":
+          // event.message is fully typed here
+          helpers.appendText(`[Error: ${event.message}]`);
+          break;
+      }
+    },
+  });
+}
+```
+
+Without the `TEvent` generic, TypeScript would reject `case "error"` because `SSEEvent` only includes `"text_delta" | "tool_call"`.
+
+## Custom Part Types
+
+The first generic parameter `TPart` lets you define custom content part types. Your custom type must extend `{ type: string }`:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+import type { ContentPart, SSEEvent } from "@devscalelabs/react-sse-chat";
+
+// Define custom part and event
+interface ThinkingPart {
+  type: "thinking";
+  text: string;
+}
+
+interface ThinkingEvent {
+  type: "thinking";
+  text: string;
+}
+
+type MyPart = ContentPart | ThinkingPart;
+type MyEvent = SSEEvent | ThinkingEvent;
+
+function Chat() {
+  const { messages } = useChat<MyPart, MyEvent>({
+    api: "/chat",
+    onEvent: (event, helpers) => {
+      switch (event.type) {
+        case "text_delta":
+          helpers.appendText(event.delta);
+          break;
+        case "tool_call":
+          helpers.appendPart({
+            type: "tool_call",
+            tool_name: event.tool_name,
+            argument: event.argument,
+          });
+          break;
+        case "thinking":
+          helpers.appendPart({
+            type: "thinking",
+            text: event.text,
           });
           break;
       }
@@ -160,7 +215,7 @@ function Chat() {
 }
 ```
 
-All callbacks (`onMessage`, `onFinish`) and the returned `messages` array are fully typed with your custom part type.
+Both generics are optional and default to the built-in types. All callbacks (`onMessage`, `onFinish`) and the returned `messages` array are fully typed with your custom part type.
 
 ## Lifecycle Callbacks
 

@@ -3,16 +3,27 @@ title: API Reference
 description: Complete API documentation for useChat hook and exported types.
 ---
 
-## `useChat<TPart>(options): UseChatReturn<TPart>`
+## `useChat<TPart, TEvent>(options): UseChatReturn<TPart>`
 
-The hook accepts an optional generic parameter `TPart` for custom content part types. Defaults to `ContentPart` (built-in `TextPart | ToolCallPart`).
+The hook accepts two optional generic parameters:
+
+- **`TPart`** — custom content part types. Defaults to `ContentPart` (`TextPart | ToolCallPart`).
+- **`TEvent`** — custom SSE event types. Defaults to `SSEEvent` (`TextDeltaEvent | ToolCallEvent`).
 
 ```tsx
-// Default — uses built-in ContentPart
+// Default — uses built-in ContentPart and SSEEvent
 const chat = useChat({ api: "/chat" });
 
-// Custom — extend with your own part types
+// Custom parts — extend with your own part types
 const chat = useChat<ContentPart | ThinkingPart>({ api: "/chat" });
+
+// Custom parts and events — extend both
+const chat = useChat<ContentPart | ErrorPart, SSEEvent | ErrorEvent>({
+  api: "/chat",
+  onEvent: (event, helpers) => {
+    // event is typed as SSEEvent | ErrorEvent
+  },
+});
 ```
 
 ### Options
@@ -23,7 +34,7 @@ const chat = useChat<ContentPart | ThinkingPart>({ api: "/chat" });
 | `initialMessages` | `Message<TPart>[]` | No | Initial messages to prepopulate the chat |
 | `headers` | `Record<string, string>` | No | Extra headers merged into every fetch request |
 | `body` | `Record<string, unknown>` | No | Extra fields merged into POST body alongside `message` |
-| `onEvent` | `(event, helpers) => void` | No | Custom SSE event handler (replaces default `text_delta` handling) |
+| `onEvent` | `(event: TEvent, helpers) => void` | No | Custom SSE event handler (replaces default `text_delta` handling) |
 | `onMessage` | `(message) => void` | No | Called when a complete message (user or assistant) is added |
 | `onError` | `(error) => void` | No | Called on fetch or stream error |
 | `onFinish` | `(messages) => void` | No | Called when the stream ends |
@@ -134,17 +145,20 @@ interface EventHelpers<TPart extends { type: string } = ContentPart> {
 }
 ```
 
-### `UseChatOptions<TPart>`
+### `UseChatOptions<TPart, TEvent>`
 
-Generic over part type. Defaults to `ContentPart`:
+Generic over part type and event type. Defaults to `ContentPart` and `SSEEvent`:
 
 ```ts
-interface UseChatOptions<TPart extends { type: string } = ContentPart> {
+interface UseChatOptions<
+  TPart extends { type: string } = ContentPart,
+  TEvent extends { type: string } = SSEEvent,
+> {
   api: string;
   initialMessages?: Message<TPart>[];
   headers?: Record<string, string>;
   body?: Record<string, unknown>;
-  onEvent?: (event: SSEEvent, helpers: EventHelpers<TPart>) => void;
+  onEvent?: (event: TEvent, helpers: EventHelpers<TPart>) => void;
   onFinish?: (messages: Message<TPart>[]) => void;
   onMessage?: (message: Message<TPart>) => void;
   onError?: (error: Error) => void;
