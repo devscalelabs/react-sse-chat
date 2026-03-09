@@ -13,7 +13,7 @@
 	--sl-color-gray-3: #71717a;          /* zinc-500 */
 	--sl-color-gray-4: #52525b;          /* zinc-600 */
 	--sl-color-gray-5: #27272a;          /* zinc-800 */
-	--sl-color-gray-6: #18181b;          /* zinc-900 */
+	--sl-color-gray-6: #0a0a0b;          /* zinc-950 variant */
 	--sl-color-black: #09090b;           /* zinc-950 */
 
 	/* Accent — muted, nearly white */
@@ -43,7 +43,7 @@
 	--sl-color-gray-3: #71717a;
 	--sl-color-gray-4: #52525b;
 	--sl-color-gray-5: #27272a;
-	--sl-color-gray-6: #18181b;
+	--sl-color-gray-6: #0a0a0b;
 	--sl-color-gray-7: #09090b;
 	--sl-color-black: #09090b;
 
