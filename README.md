@@ -22,7 +22,15 @@ function Chat() {
     <div>
       {messages.map((msg) => (
         <div key={msg.id}>
-          <strong>{msg.role}:</strong> {msg.content}
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+              case "tool_call":
+                return <em key={i}>[Calling {part.tool_name}...]</em>;
+            }
+          })}
         </div>
       ))}
       {isLoading && <button onClick={stop}>Stop</button>}
