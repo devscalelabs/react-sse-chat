@@ -1,0 +1,33 @@
+---
+title: react-sse-chat
+description: A lightweight React hook for consuming Server-Sent Events (SSE) from AI chat backends.
+template: splash
+hero:
+  title: react-sse-chat
+  tagline: A lightweight React hook for consuming SSE from AI chat backends. Zero dependencies.
+  actions:
+    - text: Get Started
+      link: /guide/getting-started
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/devscalelabs/react-sse-chat
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Zero Dependencies" icon="rocket">
+    Uses native `fetch` + `ReadableStream`. No heavy SDKs needed.
+  </Card>
+  <Card title="Simple API" icon="pencil">
+    One hook, one line: `useChat({ api })`. Messages, loading, and streaming handled for you.
+  </Card>
+  <Card title="Custom Events" icon="setting">
+    Handle `text_delta`, `tool_call`, or any custom SSE event with `onEvent`.
+  </Card>
+  <Card title="Standalone Parser" icon="document">
+    The SSE parser is exported separately for advanced use cases outside React.
+  </Card>
+</CardGrid>

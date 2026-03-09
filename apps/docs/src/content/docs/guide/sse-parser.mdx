@@ -1,0 +1,75 @@
+---
+title: Standalone SSE Parser
+description: Use the SSE parser independently for advanced streaming use cases.
+sidebar:
+  order: 4
+---
+
+The SSE parser is exported separately for use cases where you don't need the full `useChat` hook — for example, in a Node.js script, a custom hook, or a non-React context.
+
+## Usage
+
+```ts
+import { parseSSEStream } from "@devscalelabs/react-sse-chat";
+
+const response = await fetch("/stream", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message: "Hello" }),
+});
+
+for await (const event of parseSSEStream(response.body!, signal)) {
+  console.log(event);
+  // { type: "text_delta", delta: "Hello" }
+  // { type: "tool_call", tool_name: "search", argument: "..." }
+}
+```
+
+## API
+
+### `parseSSEStream(stream, signal?): AsyncGenerator<SSEEvent>`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `stream` | `ReadableStream<Uint8Array>` | The response body from a `fetch()` call |
+| `signal` | `AbortSignal` (optional) | Signal for cancellation |
+
+Returns an `AsyncGenerator` that yields `SSEEvent` objects.
+
+## Behavior
+
+- Parses `data: {JSON}\n\n` formatted SSE events
+- Handles partial chunks that are split across multiple `read()` calls
+- Stops when `data: [DONE]` is received or the stream ends
+- Skips malformed JSON lines without throwing
+- Only processes `data:` lines — ignores `event:`, `id:`, and comment lines
+
+## Example: Custom Hook
+
+You can build your own hook on top of the parser:
+
+```tsx
+import { useState, useCallback } from "react";
+import { parseSSEStream } from "@devscalelabs/react-sse-chat";
+import type { SSEEvent } from "@devscalelabs/react-sse-chat";
+
+function useCustomStream(url: string) {
+  const [events, setEvents] = useState<SSEEvent[]>([]);
+
+  const start = useCallback(async (message: string) => {
+    const controller = new AbortController();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal: controller.signal,
+    });
+
+    for await (const event of parseSSEStream(response.body!, controller.signal)) {
+      setEvents((prev) => [...prev, event]);
+    }
+  }, [url]);
+
+  return { events, start };
+}
+```

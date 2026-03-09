@@ -1,0 +1,109 @@
+---
+title: Hono + OpenAI Chat Completions
+description: Full-stack TypeScript example with Hono backend and React frontend.
+sidebar:
+  order: 2
+---
+
+A full-stack TypeScript example with a [Hono](https://hono.dev) backend streaming OpenAI Chat Completions as SSE, consumed by a React frontend using `@devscalelabs/react-sse-chat`.
+
+## Backend (Hono)
+
+```ts
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
+import { serve } from "@hono/node-server";
+import OpenAI from "openai";
+
+const app = new Hono();
+const openai = new OpenAI(); // reads OPENAI_API_KEY from env
+
+app.use("/*", cors());
+
+app.post("/chat", async (c) => {
+  const { message } = await c.req.json<{ message: string }>();
+
+  const stream = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: message },
+    ],
+    stream: true,
+  });
+
+  return streamSSE(c, async (sseStream) => {
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) {
+        await sseStream.writeSSE({
+          data: JSON.stringify({ type: "text_delta", delta }),
+        });
+      }
+    }
+    await sseStream.writeSSE({ data: "[DONE]" });
+  });
+});
+
+serve({ fetch: app.fetch, port: 8000 }, (info) => {
+  console.log(`Hono server running on http://localhost:${info.port}`);
+});
+```
+
+## Frontend (React)
+
+Since this backend only emits `text_delta` events, the default event handling works out of the box — no `onEvent` needed:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+        </div>
+      ))}
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Run the Example
+
+The full runnable example is in the [`cookbook/hono-openai`](https://github.com/devscalelabs/react-sse-chat/tree/main/cookbook/hono-openai) directory:
+
+```bash
+git clone https://github.com/devscalelabs/react-sse-chat.git
+cd react-sse-chat
+pnpm install
+
+# Terminal 1 — start the Hono backend
+OPENAI_API_KEY=sk-... pnpm --filter cookbook-hono-openai dev:server
+
+# Terminal 2 — start the Vite frontend (proxies /chat to localhost:8000)
+pnpm --filter cookbook-hono-openai dev
+```
+
+Open `http://localhost:5173` in your browser.

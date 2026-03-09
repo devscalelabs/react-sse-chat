@@ -1,0 +1,63 @@
+---
+title: SSE Format
+description: The Server-Sent Events format your backend needs to emit.
+sidebar:
+  order: 2
+---
+
+## Expected Format
+
+The backend should emit events as `data: {JSON}\n\n`:
+
+```
+data: {"type": "text_delta", "delta": "Hello"}
+data: {"type": "text_delta", "delta": " world"}
+data: {"type": "tool_call", "tool_name": "search", "argument": "..."}
+```
+
+The stream can optionally end with:
+
+```
+data: [DONE]
+```
+
+## Event Types
+
+### `text_delta`
+
+The primary event type. Each event contains a chunk of the assistant's response:
+
+```json
+{"type": "text_delta", "delta": "Hello"}
+```
+
+By default, `useChat` concatenates all `delta` values into the assistant message's `content`.
+
+### `tool_call`
+
+Emitted when the AI invokes a tool:
+
+```json
+{"type": "tool_call", "tool_name": "search_web", "argument": "{\"query\": \"...\" }"}
+```
+
+These are **not** handled by default. Use the [`onEvent` callback](/custom-events) to process them.
+
+## HTTP Request
+
+`useChat` sends a `POST` request with:
+
+- **Content-Type:** `application/json`
+- **Body:** `{ "message": "user text", ...body }` (where `body` is the extra fields you passed to `useChat`)
+
+The response must be a streaming response with `Content-Type: text/event-stream`.
+
+## How Streaming Works
+
+Under the hood, `useChat` uses native `fetch` with `ReadableStream`:
+
+1. A `POST` request is sent to the `api` URL
+2. The response body is read as a stream
+3. Each `data:` line is parsed as JSON
+4. Events are dispatched to the event handler (default or custom `onEvent`)
+5. The stream ends when the connection closes or `data: [DONE]` is received
