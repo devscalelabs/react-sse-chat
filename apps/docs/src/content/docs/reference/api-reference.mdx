@@ -85,6 +85,7 @@ interface ToolCallPart {
   type: "tool_call";
   tool_name: string;
   argument: string;
+  callId?: string; // present in agent history, absent during SSE streaming
 }
 ```
 
@@ -215,17 +216,6 @@ interface ReasoningPart {
 }
 ```
 
-### `AgentToolCallPart`
-
-```ts
-interface AgentToolCallPart {
-  type: "tool_call";
-  name: string;
-  arguments: string;
-  callId: string;
-}
-```
-
 ### `ToolResultPart`
 
 ```ts
@@ -243,7 +233,7 @@ Union of all content parts the converter can produce:
 ```ts
 type OpenAIAgentsContentPart =
   | TextPart
+  | ToolCallPart
   | ReasoningPart
-  | AgentToolCallPart
   | ToolResultPart;
 ```

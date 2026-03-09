@@ -13,6 +13,8 @@ export interface ToolCallPart {
   type: "tool_call";
   tool_name: string;
   argument: string;
+  /** Unique ID to correlate a tool call with its result. Present in agent history, absent during SSE streaming. */
+  callId?: string;
 }
 
 /** Built-in content part types provided by the library. */

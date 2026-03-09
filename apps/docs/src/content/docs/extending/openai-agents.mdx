@@ -33,7 +33,7 @@ function Chat({ agentData }: { agentData: unknown[] }) {
               case "tool_call":
                 return (
                   <pre key={i}>
-                    Called {part.name}({part.arguments})
+                    Called {part.tool_name}({part.argument})
                   </pre>
                 );
               case "tool_result":
@@ -76,7 +76,7 @@ Then render the reasoning parts in your component:
     case "tool_call":
       return (
         <pre key={i}>
-          Called {part.name}({part.arguments})
+          Called {part.tool_name}({part.argument})
         </pre>
       );
     case "tool_result":
@@ -95,7 +95,7 @@ The converter recognizes the following items from the OpenAI Agents SDK:
 |---|---|---|
 | `{ role: "user", content: "..." }` | `TextPart` in a new user `Message` | Yes |
 | `{ type: "message", role: "assistant", content: [{ type: "output_text" }] }` | `TextPart` in current assistant `Message` | Yes |
-| `{ type: "function_call", name, arguments, call_id }` | `AgentToolCallPart` in current assistant `Message` | Yes |
+| `{ type: "function_call", name, arguments, call_id }` | `ToolCallPart` in current assistant `Message` | Yes |
 | `{ type: "function_call_output", call_id, output }` | `ToolResultPart` in current assistant `Message` | Yes |
 | `{ type: "reasoning", content: [{ type: "reasoning_text" }] }` | `ReasoningPart` in current assistant `Message` | No (`includeReasoning: true`) |
 
@@ -176,8 +176,8 @@ The converter produces parts typed as `OpenAIAgentsContentPart`, a union of all 
 ```ts
 import type {
   TextPart,
+  ToolCallPart,
   ReasoningPart,
-  AgentToolCallPart,
   ToolResultPart,
   OpenAIAgentsContentPart,
 } from "@devscalelabs/react-sse-chat";

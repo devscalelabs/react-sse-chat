@@ -9,13 +9,6 @@ export interface ReasoningPart {
   text: string;
 }
 
-export interface AgentToolCallPart {
-  type: "tool_call";
-  name: string;
-  arguments: string;
-  callId: string;
-}
-
 export interface ToolResultPart {
   type: "tool_result";
   callId: string;
@@ -27,7 +20,6 @@ export type OpenAIAgentsContentPart =
   | TextPart
   | ToolCallPart
   | ReasoningPart
-  | AgentToolCallPart
   | ToolResultPart;
 
 // ---------------------------------------------------------------------------
@@ -177,8 +169,8 @@ export function convertOpenAIAgentsMessages(
       const assistantMsg = getOrCreateAssistantMessage();
       assistantMsg.parts.push({
         type: "tool_call",
-        name: raw.name as string,
-        arguments: raw.arguments as string,
+        tool_name: raw.name as string,
+        argument: raw.arguments as string,
         callId: (raw.call_id as string) ?? "",
       });
       continue;

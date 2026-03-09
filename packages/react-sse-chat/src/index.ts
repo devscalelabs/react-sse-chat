@@ -17,7 +17,6 @@ export type {
 
 export type {
   ReasoningPart,
-  AgentToolCallPart,
   ToolResultPart,
   OpenAIAgentsContentPart,
   ConvertOpenAIAgentsOptions,
