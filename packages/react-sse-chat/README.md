@@ -22,7 +22,22 @@ function Chat() {
     <div>
       {messages.map((msg) => (
         <div key={msg.id}>
-          <strong>{msg.role}:</strong> {msg.content}
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+              case "tool_call":
+                return (
+                  <pre key={i} style={{ opacity: 0.7, fontSize: "0.85em" }}>
+                    [Tool: {part.tool_name}]{"\n"}
+                    {JSON.stringify(JSON.parse(part.argument), null, 2)}
+                  </pre>
+                );
+              default:
+                return null;
+            }
+          })}
         </div>
       ))}
       {isLoading && <button onClick={stop}>Stop</button>}

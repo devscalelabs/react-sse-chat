@@ -2,7 +2,7 @@
 title: Auto-scroll
 description: Automatically scroll to the latest message as the assistant streams a response.
 sidebar:
-  order: 6
+  order: 7
 ---
 
 Chat UIs should scroll to the bottom as new content arrives. Since `useChat` is a hook-only library, you implement scrolling in your component.
@@ -36,6 +36,8 @@ function Chat() {
               switch (part.type) {
                 case "text":
                   return <span key={i}>{part.text}</span>;
+                default:
+                  return null;
               }
             })}
           </div>
@@ -108,6 +110,8 @@ function Chat() {
               switch (part.type) {
                 case "text":
                   return <span key={i}>{part.text}</span>;
+                default:
+                  return null;
               }
             })}
           </div>

@@ -72,6 +72,8 @@ function Chat() {
             switch (part.type) {
               case "text":
                 return <span key={i} style={{ whiteSpace: "pre-wrap" }}>{part.text}</span>;
+              default:
+                return null;
             }
           })}
         </div>

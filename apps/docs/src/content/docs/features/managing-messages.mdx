@@ -40,6 +40,8 @@ function handleDelete(messageId: string) {
       switch (part.type) {
         case "text":
           return <span key={i}>{part.text}</span>;
+        default:
+          return null;
       }
     })}
     <button onClick={() => handleDelete(msg.id)}>Delete</button>

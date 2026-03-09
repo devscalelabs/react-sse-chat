@@ -81,6 +81,8 @@ function ChatUI({ initialMessages }: { initialMessages?: Message[] }) {
             switch (part.type) {
               case "text":
                 return <span key={i}>{part.text}</span>;
+              default:
+                return null;
             }
           })}
         </div>

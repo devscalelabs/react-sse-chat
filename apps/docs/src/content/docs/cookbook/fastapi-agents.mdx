@@ -99,10 +99,13 @@ function Chat() {
                 return <span key={i} style={{ whiteSpace: "pre-wrap" }}>{part.text}</span>;
               case "tool_call":
                 return (
-                  <em key={i} style={{ display: "block", opacity: 0.7 }}>
-                    [Calling {part.tool_name}...]
-                  </em>
+                  <pre key={i} style={{ display: "block", opacity: 0.7, fontSize: "0.85em" }}>
+                    [Tool: {part.tool_name}]{"\n"}
+                    {JSON.stringify(JSON.parse(part.argument), null, 2)}
+                  </pre>
                 );
+              default:
+                return null;
             }
           })}
         </div>

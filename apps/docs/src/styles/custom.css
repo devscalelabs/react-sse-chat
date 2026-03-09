@@ -148,22 +148,34 @@ pre {
 	border-radius: 4px;
 }
 
-/* Card grid — single column */
+/* Card grid — two columns */
 .card-grid {
-	grid-template-columns: 1fr !important;
+	grid-template-columns: repeat(2, 1fr) !important;
+}
+@media (max-width: 640px) {
+	.card-grid {
+		grid-template-columns: 1fr !important;
+	}
 }
 
-/* Cards — monochrome icons */
+/* Cards — monochrome icons, compact */
 .card {
 	--sl-card-border: var(--sl-color-gray-4) !important;
 	--sl-card-bg: var(--sl-color-gray-6) !important;
 	border: 1px solid var(--sl-color-gray-5);
 	border-radius: 8px;
+	padding: 1.25rem 1.5rem !important;
 	transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .card:hover {
 	border-color: var(--sl-color-gray-4);
 	box-shadow: var(--sl-shadow-md);
+}
+.card .card-title {
+	margin-bottom: 0.25rem !important;
+}
+.card .card-body {
+	gap: 0.25rem !important;
 }
 
 /* Hero section — tighter, cleaner */

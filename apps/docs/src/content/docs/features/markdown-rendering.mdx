@@ -2,7 +2,7 @@
 title: Markdown Rendering
 description: Render AI responses as Markdown using react-markdown or similar libraries.
 sidebar:
-  order: 5
+  order: 6
 ---
 
 AI responses almost always contain Markdown — headings, lists, code blocks, bold text, etc. Since `useChat` gives you raw text in `parts`, you bring your own Markdown renderer.
@@ -35,12 +35,8 @@ function Chat() {
             switch (part.type) {
               case "text":
                 return <ReactMarkdown key={i}>{part.text}</ReactMarkdown>;
-              case "tool_call":
-                return (
-                  <em key={i} style={{ opacity: 0.7 }}>
-                    [Calling {part.tool_name}...]
-                  </em>
-                );
+              default:
+                return null;
             }
           })}
         </div>
@@ -115,6 +111,8 @@ Then use it in your message rendering:
   switch (part.type) {
     case "text":
       return <MarkdownContent key={i} content={part.text} />;
+    default:
+      return null;
   }
 })}
 ```
