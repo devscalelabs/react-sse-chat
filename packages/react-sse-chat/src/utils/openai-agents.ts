@@ -1,4 +1,4 @@
-import type { TextPart, Message } from "../types";
+import type { TextPart, ToolCallPart, Message } from "../types";
 
 // ---------------------------------------------------------------------------
 // Part Types — OpenAI Agents-specific content parts
@@ -25,6 +25,7 @@ export interface ToolResultPart {
 /** Union of all content parts the OpenAI Agents converter can produce. */
 export type OpenAIAgentsContentPart =
   | TextPart
+  | ToolCallPart
   | ReasoningPart
   | AgentToolCallPart
   | ToolResultPart;
