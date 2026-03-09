@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 
 /* ------------------------------------------------------------------ */
 /* Zinc-950 dark theme — minimalist, subtle shadows                   */
@@ -27,7 +27,7 @@
 	--sl-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
 
 	/* Font */
-	--sl-font: 'Instrument Sans', 'Helvetica Neue', sans-serif;
+	--sl-font: 'Geist', 'Helvetica Neue', sans-serif;
 
 	/* Tighter body text */
 	--sl-text-body: var(--sl-text-sm);
