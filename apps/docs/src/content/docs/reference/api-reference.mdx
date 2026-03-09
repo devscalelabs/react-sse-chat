@@ -179,3 +179,71 @@ interface UseChatReturn<TPart extends { type: string } = ContentPart> {
   setMessages: Dispatch<SetStateAction<Message<TPart>[]>>;
 }
 ```
+
+---
+
+## `convertOpenAIAgentsMessages(items, options?)`
+
+Converts an array of raw [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) message items into `Message<OpenAIAgentsContentPart>[]`. Consecutive assistant-side items are merged into a single message with multiple parts.
+
+```ts
+import { convertOpenAIAgentsMessages } from "@devscalelabs/react-sse-chat";
+
+const messages = convertOpenAIAgentsMessages(agentData);
+const messagesWithReasoning = convertOpenAIAgentsMessages(agentData, {
+  includeReasoning: true,
+});
+```
+
+### `ConvertOpenAIAgentsOptions`
+
+```ts
+interface ConvertOpenAIAgentsOptions {
+  /** Include reasoning items as ReasoningPart. Defaults to false. */
+  includeReasoning?: boolean;
+}
+```
+
+## OpenAI Agents Types
+
+### `ReasoningPart`
+
+```ts
+interface ReasoningPart {
+  type: "reasoning";
+  text: string;
+}
+```
+
+### `AgentToolCallPart`
+
+```ts
+interface AgentToolCallPart {
+  type: "tool_call";
+  name: string;
+  arguments: string;
+  callId: string;
+}
+```
+
+### `ToolResultPart`
+
+```ts
+interface ToolResultPart {
+  type: "tool_result";
+  callId: string;
+  output: string;
+}
+```
+
+### `OpenAIAgentsContentPart`
+
+Union of all content parts the converter can produce:
+
+```ts
+type OpenAIAgentsContentPart =
+  | TextPart
+  | ReasoningPart
+  | AgentToolCallPart
+  | ToolResultPart;
+```

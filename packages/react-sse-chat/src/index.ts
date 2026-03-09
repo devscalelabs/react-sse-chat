@@ -1,5 +1,6 @@
 export { useChat } from "./use-chat";
 export { parseSSEStream } from "./sse-parser";
+export { convertOpenAIAgentsMessages } from "./utils/openai-agents";
 
 export type {
   TextPart,
@@ -13,3 +14,11 @@ export type {
   UseChatOptions,
   UseChatReturn,
 } from "./types";
+
+export type {
+  ReasoningPart,
+  AgentToolCallPart,
+  ToolResultPart,
+  OpenAIAgentsContentPart,
+  ConvertOpenAIAgentsOptions,
+} from "./utils/openai-agents";

@@ -1,0 +1,186 @@
+---
+title: OpenAI Agents Converter
+description: Convert OpenAI Agents SDK message history into react-sse-chat messages.
+sidebar:
+  order: 5
+---
+
+When using the [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) (Python), the message history uses a different format than `react-sse-chat`. The `convertOpenAIAgentsMessages` utility converts raw agent items into `Message[]` so you can pass them directly to `initialMessages`.
+
+## Basic Usage
+
+```tsx
+import {
+  useChat,
+  convertOpenAIAgentsMessages,
+} from "@devscalelabs/react-sse-chat";
+
+function Chat({ agentData }: { agentData: unknown[] }) {
+  const { messages, sendMessage } = useChat({
+    api: "/chat",
+    initialMessages: convertOpenAIAgentsMessages(agentData),
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <p key={i}>{part.text}</p>;
+              case "tool_call":
+                return (
+                  <pre key={i}>
+                    Called {part.name}({part.arguments})
+                  </pre>
+                );
+              case "tool_result":
+                return <pre key={i}>Result: {part.output}</pre>;
+              default:
+                return null;
+            }
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+## Including Reasoning
+
+By default, reasoning items are excluded. Pass `{ includeReasoning: true }` to include them:
+
+```tsx
+const messages = convertOpenAIAgentsMessages(agentData, {
+  includeReasoning: true,
+});
+```
+
+Then render the reasoning parts in your component:
+
+```tsx
+{msg.parts.map((part, i) => {
+  switch (part.type) {
+    case "text":
+      return <p key={i}>{part.text}</p>;
+    case "reasoning":
+      return (
+        <details key={i}>
+          <summary>Reasoning</summary>
+          <p>{part.text}</p>
+        </details>
+      );
+    case "tool_call":
+      return (
+        <pre key={i}>
+          Called {part.name}({part.arguments})
+        </pre>
+      );
+    case "tool_result":
+      return <pre key={i}>Result: {part.output}</pre>;
+    default:
+      return null;
+  }
+})}
+```
+
+## Supported Item Types
+
+The converter recognizes the following items from the OpenAI Agents SDK:
+
+| Raw Item | Converts To | Included By Default |
+|---|---|---|
+| `{ role: "user", content: "..." }` | `TextPart` in a new user `Message` | Yes |
+| `{ type: "message", role: "assistant", content: [{ type: "output_text" }] }` | `TextPart` in current assistant `Message` | Yes |
+| `{ type: "function_call", name, arguments, call_id }` | `AgentToolCallPart` in current assistant `Message` | Yes |
+| `{ type: "function_call_output", call_id, output }` | `ToolResultPart` in current assistant `Message` | Yes |
+| `{ type: "reasoning", content: [{ type: "reasoning_text" }] }` | `ReasoningPart` in current assistant `Message` | No (`includeReasoning: true`) |
+
+Consecutive assistant-side items (reasoning, text output, tool calls, tool results) are merged into a single `Message` with multiple parts. A user message always creates a new message boundary.
+
+Unknown items are silently skipped.
+
+## Loading from an API
+
+A common pattern is fetching the agent message history from your backend, then converting it:
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { useChat, convertOpenAIAgentsMessages } from "@devscalelabs/react-sse-chat";
+
+function Chat({ sessionId }: { sessionId: string }) {
+  const { data, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ["chat-history", sessionId],
+    queryFn: async () => {
+      const res = await fetch(`/api/history/${sessionId}`);
+      return res.json();
+    },
+  });
+
+  if (isHistoryLoading) return <div>Loading chat history...</div>;
+
+  return <ChatUI agentData={data.messages} />;
+}
+
+function ChatUI({ agentData }: { agentData: unknown[] }) {
+  const { messages, sendMessage, isLoading, stop } = useChat({
+    api: "/chat",
+    initialMessages: convertOpenAIAgentsMessages(agentData),
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <p key={i}>{part.text}</p>;
+              default:
+                return null;
+            }
+          })}
+        </div>
+      ))}
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+:::tip
+Mount `ChatUI` only after the query resolves. Since `initialMessages` is used as the initial value of `useState`, it is only read on the first render — changes after mount are ignored.
+:::
+
+## Part Types
+
+The converter produces parts typed as `OpenAIAgentsContentPart`, a union of all possible parts:
+
+```ts
+import type {
+  TextPart,
+  ReasoningPart,
+  AgentToolCallPart,
+  ToolResultPart,
+  OpenAIAgentsContentPart,
+} from "@devscalelabs/react-sse-chat";
+```
+
+All types are individually exported, so you can reference them directly in your component props or `switch` statements.
