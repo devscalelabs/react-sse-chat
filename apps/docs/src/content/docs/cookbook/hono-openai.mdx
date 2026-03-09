@@ -68,7 +68,12 @@ function Chat() {
       {messages.map((msg) => (
         <div key={msg.id}>
           <strong>{msg.role}:</strong>
-          <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i} style={{ whiteSpace: "pre-wrap" }}>{part.text}</span>;
+            }
+          })}
         </div>
       ))}
 

@@ -3,13 +3,24 @@ title: API Reference
 description: Complete API documentation for useChat hook and exported types.
 ---
 
-## `useChat(options): UseChatReturn`
+## `useChat<TPart>(options): UseChatReturn<TPart>`
+
+The hook accepts an optional generic parameter `TPart` for custom content part types. Defaults to `ContentPart` (built-in `TextPart | ToolCallPart`).
+
+```tsx
+// Default — uses built-in ContentPart
+const chat = useChat({ api: "/chat" });
+
+// Custom — extend with your own part types
+const chat = useChat<ContentPart | ThinkingPart>({ api: "/chat" });
+```
 
 ### Options
 
 | Option | Type | Required | Description |
 |---|---|---|---|
 | `api` | `string` | Yes | SSE endpoint URL |
+| `initialMessages` | `Message<TPart>[]` | No | Initial messages to prepopulate the chat |
 | `headers` | `Record<string, string>` | No | Extra headers merged into every fetch request |
 | `body` | `Record<string, unknown>` | No | Extra fields merged into POST body alongside `message` |
 | `onEvent` | `(event, helpers) => void` | No | Custom SSE event handler (replaces default `text_delta` handling) |
@@ -21,12 +32,12 @@ description: Complete API documentation for useChat hook and exported types.
 
 | Field | Type | Description |
 |---|---|---|
-| `messages` | `Message[]` | Array of `{ id, role, content }` |
+| `messages` | `Message<TPart>[]` | Array of `{ id, role, parts }` |
 | `isLoading` | `boolean` | `true` while streaming |
 | `error` | `Error \| null` | Most recent error, or `null` |
 | `sendMessage` | `(text: string) => void` | Send a user message and start streaming |
 | `stop` | `() => void` | Abort the current stream |
-| `setMessages` | `Dispatch<SetStateAction<Message[]>>` | Direct state setter for programmatic control |
+| `setMessages` | `Dispatch<SetStateAction<Message<TPart>[]>>` | Direct state setter for programmatic control |
 
 ## Types
 
@@ -34,6 +45,9 @@ All types are exported for use in your own code:
 
 ```ts
 import type {
+  TextPart,
+  ToolCallPart,
+  ContentPart,
   Message,
   SSEEvent,
   TextDeltaEvent,
@@ -44,13 +58,42 @@ import type {
 } from "@devscalelabs/react-sse-chat";
 ```
 
-### `Message`
+### `TextPart`
 
 ```ts
-interface Message {
+interface TextPart {
+  type: "text";
+  text: string;
+}
+```
+
+### `ToolCallPart`
+
+```ts
+interface ToolCallPart {
+  type: "tool_call";
+  tool_name: string;
+  argument: string;
+}
+```
+
+### `ContentPart`
+
+Built-in content part union. Use as a base when defining custom parts:
+
+```ts
+type ContentPart = TextPart | ToolCallPart;
+```
+
+### `Message<TPart>`
+
+Generic over part type. Defaults to `ContentPart`:
+
+```ts
+interface Message<TPart extends { type: string } = ContentPart> {
   id: string;
   role: "user" | "assistant";
-  content: string;
+  parts: TPart[];
 }
 ```
 
@@ -79,38 +122,46 @@ interface ToolCallEvent {
 }
 ```
 
-### `EventHelpers`
+### `EventHelpers<TPart>`
+
+Generic over part type. Defaults to `ContentPart`:
 
 ```ts
-interface EventHelpers {
-  appendContent: (delta: string) => void;
-  setMessages: Dispatch<SetStateAction<Message[]>>;
+interface EventHelpers<TPart extends { type: string } = ContentPart> {
+  appendText: (delta: string) => void;
+  appendPart: (part: TPart) => void;
+  setMessages: Dispatch<SetStateAction<Message<TPart>[]>>;
 }
 ```
 
-### `UseChatOptions`
+### `UseChatOptions<TPart>`
+
+Generic over part type. Defaults to `ContentPart`:
 
 ```ts
-interface UseChatOptions {
+interface UseChatOptions<TPart extends { type: string } = ContentPart> {
   api: string;
+  initialMessages?: Message<TPart>[];
   headers?: Record<string, string>;
   body?: Record<string, unknown>;
-  onEvent?: (event: SSEEvent, helpers: EventHelpers) => void;
-  onFinish?: (messages: Message[]) => void;
-  onMessage?: (message: Message) => void;
+  onEvent?: (event: SSEEvent, helpers: EventHelpers<TPart>) => void;
+  onFinish?: (messages: Message<TPart>[]) => void;
+  onMessage?: (message: Message<TPart>) => void;
   onError?: (error: Error) => void;
 }
 ```
 
-### `UseChatReturn`
+### `UseChatReturn<TPart>`
+
+Generic over part type. Defaults to `ContentPart`:
 
 ```ts
-interface UseChatReturn {
-  messages: Message[];
+interface UseChatReturn<TPart extends { type: string } = ContentPart> {
+  messages: Message<TPart>[];
   isLoading: boolean;
   error: Error | null;
   sendMessage: (text: string) => void;
   stop: () => void;
-  setMessages: Dispatch<SetStateAction<Message[]>>;
+  setMessages: Dispatch<SetStateAction<Message<TPart>[]>>;
 }
 ```

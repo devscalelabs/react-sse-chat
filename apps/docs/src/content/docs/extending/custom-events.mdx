@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-By default, only `text_delta` events are processed (appended to the assistant message content). Use `onEvent` to handle additional event types.
+By default, only `text_delta` events are processed (appended as text parts to the assistant message). Use `onEvent` to handle additional event types.
 
 ## Basic Usage
 
@@ -15,10 +15,14 @@ const { messages } = useChat({
   onEvent: (event, helpers) => {
     switch (event.type) {
       case "text_delta":
-        helpers.appendContent(event.delta);
+        helpers.appendText(event.delta);
         break;
       case "tool_call":
-        helpers.appendContent(`\n[Calling ${event.tool_name}...]\n`);
+        helpers.appendPart({
+          type: "tool_call",
+          tool_name: event.tool_name,
+          argument: event.argument,
+        });
         break;
     }
   },
@@ -26,32 +30,123 @@ const { messages } = useChat({
 ```
 
 :::caution
-When you provide `onEvent`, it **replaces** the default `text_delta` handling entirely. You must handle `text_delta` yourself by calling `helpers.appendContent()`.
+When you provide `onEvent`, it **replaces** the default `text_delta` handling entirely. You must handle `text_delta` yourself by calling `helpers.appendText()`.
 :::
 
 ## Helpers
 
-The `helpers` object provides two methods:
+The `helpers` object provides three methods:
 
-### `appendContent(delta: string)`
+### `appendText(delta: string)`
 
-Append text to the current assistant message's content. This is the most common operation:
+Append text to the last text part of the current assistant message. If the last part is not a text part, a new text part is created:
 
 ```tsx
-helpers.appendContent(event.delta);
+helpers.appendText(event.delta);
+```
+
+### `appendPart(part: TPart)`
+
+Append a new content part to the current assistant message. The type of `part` matches the generic parameter passed to `useChat`:
+
+```tsx
+helpers.appendPart({
+  type: "tool_call",
+  tool_name: event.tool_name,
+  argument: event.argument,
+});
 ```
 
 ### `setMessages(setter)`
 
-Full access to the React state setter for advanced mutations. Use this when you need to modify messages in ways that `appendContent` doesn't support:
+Full access to the React state setter for advanced mutations. Use this when you need to modify messages in ways that `appendText` and `appendPart` don't support:
 
 ```tsx
 helpers.setMessages((prev) => {
   const last = prev[prev.length - 1];
   // Custom mutation logic
-  return [...prev.slice(0, -1), { ...last, content: "replaced" }];
+  return [...prev.slice(0, -1), { ...last, parts: [{ type: "text", text: "replaced" }] }];
 });
 ```
+
+## Rendering Parts
+
+Each message contains a `parts` array. Render them by switching on `part.type`:
+
+```tsx
+{messages.map((msg) => (
+  <div key={msg.id}>
+    <strong>{msg.role}:</strong>
+    {msg.parts.map((part, i) => {
+      switch (part.type) {
+        case "text":
+          return <span key={i}>{part.text}</span>;
+        case "tool_call":
+          return <em key={i}>[Calling {part.tool_name}...]</em>;
+      }
+    })}
+  </div>
+))}
+```
+
+## Custom Part Types
+
+The hook accepts a generic parameter so you can define your own content part types. Your custom type must extend `{ type: string }`:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+import type { ContentPart } from "@devscalelabs/react-sse-chat";
+
+// Define your custom part
+interface ThinkingPart {
+  type: "thinking";
+  text: string;
+}
+
+// Union with the built-in parts
+type MyPart = ContentPart | ThinkingPart;
+
+function Chat() {
+  const { messages } = useChat<MyPart>({
+    api: "/chat",
+    onEvent: (event, helpers) => {
+      switch (event.type) {
+        case "text_delta":
+          helpers.appendText(event.delta);
+          break;
+        case "tool_call":
+          helpers.appendPart({
+            type: "tool_call",
+            tool_name: event.tool_name,
+            argument: event.argument,
+          });
+          break;
+      }
+    },
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+              case "tool_call":
+                return <em key={i}>[Calling {part.tool_name}...]</em>;
+              case "thinking":
+                return <details key={i}><summary>Thinking...</summary>{part.text}</details>;
+            }
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+All callbacks (`onMessage`, `onFinish`) and the returned `messages` array are fully typed with your custom part type.
 
 ## Lifecycle Callbacks
 
@@ -65,7 +160,7 @@ Called when a complete message is added (both user and assistant):
 useChat({
   api: "/chat",
   onMessage: (message) => {
-    console.log(`New ${message.role} message:`, message.content);
+    console.log(`New ${message.role} message:`, message.parts);
   },
 });
 ```

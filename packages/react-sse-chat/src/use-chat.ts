@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseSSEStream } from "./sse-parser";
 import type {
+  ContentPart,
   EventHelpers,
   Message,
   SSEEvent,
@@ -18,18 +19,21 @@ function generateId(): string {
   return `msg_${Date.now()}_${++counter}`;
 }
 
-function createMessage(role: Message["role"], content: string): Message {
-  return { id: generateId(), role, content };
+function createMessage<TPart extends { type: string }>(
+  role: Message["role"],
+  parts: TPart[],
+): Message<TPart> {
+  return { id: generateId(), role, parts };
 }
 
 // ---------------------------------------------------------------------------
 // Default event handler — accumulates `text_delta` into the last
-// assistant message.
+// assistant message's parts.
 // ---------------------------------------------------------------------------
 
-function defaultOnEvent(event: SSEEvent, helpers: EventHelpers): void {
+function defaultOnEvent(event: SSEEvent, helpers: EventHelpers<ContentPart>): void {
   if (event.type === "text_delta") {
-    helpers.appendContent(event.delta);
+    helpers.appendText(event.delta);
   }
   // Other event types (e.g. tool_call) are silently ignored by default.
   // Users can provide their own `onEvent` to handle them.
@@ -39,11 +43,13 @@ function defaultOnEvent(event: SSEEvent, helpers: EventHelpers): void {
 // useChat
 // ---------------------------------------------------------------------------
 
-export function useChat(options: UseChatOptions): UseChatReturn {
-  const { api, headers, body, onEvent, onMessage, onError, onFinish } =
+export function useChat<TPart extends { type: string } = ContentPart>(
+  options: UseChatOptions<TPart>,
+): UseChatReturn<TPart> {
+  const { api, headers, body, initialMessages, onEvent, onMessage, onError, onFinish } =
     options;
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message<TPart>[]>(initialMessages ?? []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -51,19 +57,46 @@ export function useChat(options: UseChatOptions): UseChatReturn {
 
   // We use a ref for the latest messages so that callbacks created inside
   // `sendMessage` always see the current value without re-creating closures.
-  const messagesRef = useRef<Message[]>(messages);
+  const messagesRef = useRef<Message<TPart>[]>(messages);
   messagesRef.current = messages;
 
   // -----------------------------------------------------------------------
-  // appendContent — append a text delta to the last assistant message.
+  // appendText — append a text delta to the last text part of the last
+  // assistant message, or create a new text part if needed.
   // -----------------------------------------------------------------------
 
-  const appendContent = useCallback((delta: string) => {
+  const appendText = useCallback((delta: string) => {
     setMessages((prev) => {
       const last = prev[prev.length - 1];
       if (!last || last.role !== "assistant") return prev;
 
-      const updated: Message = { ...last, content: last.content + delta };
+      const parts = [...last.parts];
+      const lastPart = parts[parts.length - 1];
+
+      if (lastPart && lastPart.type === "text" && "text" in lastPart) {
+        // Append to existing text part
+        const textPart = lastPart as { type: "text"; text: string };
+        parts[parts.length - 1] = { ...lastPart, text: textPart.text + delta } as unknown as TPart;
+      } else {
+        // Create a new text part
+        parts.push({ type: "text", text: delta } as unknown as TPart);
+      }
+
+      const updated: Message<TPart> = { ...last, parts };
+      return [...prev.slice(0, -1), updated];
+    });
+  }, []);
+
+  // -----------------------------------------------------------------------
+  // appendPart — push a new content part to the last assistant message.
+  // -----------------------------------------------------------------------
+
+  const appendPart = useCallback((part: TPart) => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (!last || last.role !== "assistant") return prev;
+
+      const updated: Message<TPart> = { ...last, parts: [...last.parts, part] };
       return [...prev.slice(0, -1), updated];
     });
   }, []);
@@ -89,8 +122,10 @@ export function useChat(options: UseChatOptions): UseChatReturn {
         return;
       }
 
-      const userMessage = createMessage("user", text);
-      const assistantMessage = createMessage("assistant", "");
+      const userMessage = createMessage<TPart>("user", [
+        { type: "text", text } as unknown as TPart,
+      ]);
+      const assistantMessage = createMessage<TPart>("assistant", []);
 
       setMessages((prev) => {
         const next = [...prev, userMessage, assistantMessage];
@@ -106,8 +141,8 @@ export function useChat(options: UseChatOptions): UseChatReturn {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const eventHandler = onEvent ?? defaultOnEvent;
-      const helpers: EventHelpers = { appendContent, setMessages };
+      const eventHandler = onEvent ?? (defaultOnEvent as unknown as (event: SSEEvent, helpers: EventHelpers<TPart>) => void);
+      const helpers: EventHelpers<TPart> = { appendText, appendPart, setMessages };
 
       // Fire-and-forget async IIFE — state is managed via React setState.
       (async () => {
@@ -165,8 +200,19 @@ export function useChat(options: UseChatOptions): UseChatReturn {
         }
       })();
     },
-    [api, headers, body, onEvent, onMessage, onError, onFinish, appendContent],
+    [api, headers, body, onEvent, onMessage, onError, onFinish, appendText, appendPart],
   );
+
+  // -----------------------------------------------------------------------
+  // Cleanup — abort any in-flight stream when the component unmounts.
+  // -----------------------------------------------------------------------
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
 
   return {
     messages,

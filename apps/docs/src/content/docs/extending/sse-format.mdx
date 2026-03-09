@@ -31,7 +31,7 @@ The primary event type. Each event contains a chunk of the assistant's response:
 {"type": "text_delta", "delta": "Hello"}
 ```
 
-By default, `useChat` concatenates all `delta` values into the assistant message's `content`.
+By default, `useChat` appends all `delta` values as text parts in the assistant message's `parts` array.
 
 ### `tool_call`
 
@@ -41,7 +41,7 @@ Emitted when the AI invokes a tool:
 {"type": "tool_call", "tool_name": "search_web", "argument": "{\"query\": \"...\" }"}
 ```
 
-These are **not** handled by default. Use the [`onEvent` callback](/extending/custom-events) to process them.
+These are **not** handled by default. Use the [`onEvent` callback](/extending/custom-events) to process them — for example, by calling `helpers.appendPart()` to add a `tool_call` part to the message.
 
 ## HTTP Request
 

@@ -13,12 +13,13 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 A single hook — `useChat` — that handles everything needed to build a streaming chat UI:
 
-- **Messages state** — user and assistant messages managed for you
+- **Messages state** — user and assistant messages with structured `parts` managed for you
 - **Streaming** — real-time token-by-token rendering as the AI responds
 - **SSE parsing** — built-in parser for `data: {JSON}\n\n` formatted events
 - **Abort/stop** — cancel in-flight requests with one call
 - **Error handling** — network and stream errors surfaced via state and callbacks
 - **Custom events** — handle `tool_call`, `text_delta`, or any event type you define
+- **Structured content** — each message contains a `parts` array (text, tool calls, etc.) for flexible rendering
 
 ## Features
 
@@ -41,4 +42,5 @@ A single hook — `useChat` — that handles everything needed to build a stream
 
 - [Problem to Solve](/guide/problem-to-solve) — understand the pain points this library addresses
 - [Quick Example](/guide/quick-example) — get up and running in under a minute
+- [Features](/features/initial-messages) — initial messages, error handling, auth, markdown, and more
 - [API Reference](/reference/api-reference) — full list of options and return values

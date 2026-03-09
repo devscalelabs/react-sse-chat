@@ -24,6 +24,10 @@ export default defineConfig({
           autogenerate: { directory: "guide" },
         },
         {
+          label: "Features",
+          autogenerate: { directory: "features" },
+        },
+        {
           label: "Extending",
           autogenerate: { directory: "extending" },
         },

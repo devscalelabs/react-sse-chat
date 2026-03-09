@@ -1,0 +1,153 @@
+---
+title: Markdown Rendering
+description: Render AI responses as Markdown using react-markdown or similar libraries.
+sidebar:
+  order: 5
+---
+
+AI responses almost always contain Markdown — headings, lists, code blocks, bold text, etc. Since `useChat` gives you raw text in `parts`, you bring your own Markdown renderer.
+
+## Install react-markdown
+
+```bash
+pnpm add react-markdown
+```
+
+## Basic Usage
+
+Render text parts with `react-markdown` instead of plain `<span>`:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+import ReactMarkdown from "react-markdown";
+
+function Chat() {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <ReactMarkdown key={i}>{part.text}</ReactMarkdown>;
+              case "tool_call":
+                return (
+                  <em key={i} style={{ opacity: 0.7 }}>
+                    [Calling {part.tool_name}...]
+                  </em>
+                );
+            }
+          })}
+        </div>
+      ))}
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Syntax Highlighting for Code Blocks
+
+Add syntax highlighting with `react-syntax-highlighter`:
+
+```bash
+pnpm add react-syntax-highlighter
+pnpm add -D @types/react-syntax-highlighter
+```
+
+```tsx
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        code({ className, children, ...props }) {
+          const match = /language-(\w+)/.exec(className || "");
+          const isInline = !match;
+
+          return isInline ? (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          ) : (
+            <SyntaxHighlighter
+              style={oneDark}
+              language={match[1]}
+              PreTag="div"
+            >
+              {String(children).replace(/\n$/, "")}
+            </SyntaxHighlighter>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+```
+
+Then use it in your message rendering:
+
+```tsx
+{msg.parts.map((part, i) => {
+  switch (part.type) {
+    case "text":
+      return <MarkdownContent key={i} content={part.text} />;
+  }
+})}
+```
+
+## User Messages vs Assistant Messages
+
+Typically, user messages are plain text while assistant messages are Markdown. You can render them differently:
+
+```tsx
+{messages.map((msg) => (
+  <div key={msg.id}>
+    {msg.parts.map((part, i) => {
+      if (part.type !== "text") return null;
+
+      return msg.role === "assistant" ? (
+        <ReactMarkdown key={i}>{part.text}</ReactMarkdown>
+      ) : (
+        <span key={i}>{part.text}</span>
+      );
+    })}
+  </div>
+))}
+```
+
+## Other Markdown Libraries
+
+`react-markdown` is the most common choice, but you can use any Markdown renderer:
+
+| Library | Notes |
+|---|---|
+| [react-markdown](https://github.com/remarkjs/react-markdown) | Most popular. Supports remark/rehype plugins. |
+| [marked](https://github.com/markedjs/marked) + `dangerouslySetInnerHTML` | Faster, but requires sanitization. |
+| [markdown-it](https://github.com/markdown-it/markdown-it) | Plugin-rich, similar tradeoffs to marked. |
+| [MDX](https://mdxjs.com/) | If you need JSX inside Markdown. |
+
+The `parts` model works with any of these — you always have the raw text string to pass to your renderer.

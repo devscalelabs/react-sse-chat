@@ -1,0 +1,157 @@
+---
+title: Error Handling
+description: Handle errors from network failures, HTTP status codes, and stream issues.
+sidebar:
+  order: 3
+---
+
+`useChat` provides two mechanisms for handling errors: the `error` state and the `onError` callback.
+
+## Error State
+
+The hook returns an `error` field that holds the most recent error, or `null`:
+
+```tsx
+const { messages, error, sendMessage } = useChat({ api: "/chat" });
+
+return (
+  <div>
+    {error && (
+      <div style={{ color: "red", padding: "0.5rem", background: "#fee" }}>
+        Error: {error.message}
+        <button onClick={() => sendMessage(lastUserMessage)}>Retry</button>
+      </div>
+    )}
+
+    {messages.map((msg) => (
+      <div key={msg.id}>
+        {msg.parts.map((part, i) => {
+          switch (part.type) {
+            case "text":
+              return <span key={i}>{part.text}</span>;
+          }
+        })}
+      </div>
+    ))}
+  </div>
+);
+```
+
+## Error Lifecycle
+
+Understanding when `error` is set and cleared:
+
+| Event | What happens |
+|---|---|
+| `sendMessage()` called | `error` is cleared to `null` |
+| HTTP response is non-200 | `error` is set to `Error("SSE request failed: {status} {statusText}")` |
+| Response body is null | `error` is set to `Error("Response body is null — SSE streaming not supported")` |
+| Network failure | `error` is set to the fetch `Error` |
+| Stream error | `error` is set to the stream `Error` |
+| User calls `stop()` | `error` is **not** set — abort errors are silently ignored |
+| Component unmounts during stream | Stream is aborted, `error` is **not** set |
+
+## onError Callback
+
+Use `onError` for side effects like logging or notifications:
+
+```tsx
+useChat({
+  api: "/chat",
+  onError: (error) => {
+    // Log to your error tracking service
+    console.error("Chat error:", error.message);
+
+    // Show a toast notification
+    toast.error("Something went wrong. Please try again.");
+  },
+});
+```
+
+The `onError` callback fires at the same time `error` state is set. Both receive the same `Error` instance.
+
+## Retry Pattern
+
+The library does not auto-retry on failure. Here's a simple manual retry pattern:
+
+```tsx
+import { useRef } from "react";
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const lastInputRef = useRef("");
+
+  const { messages, error, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  const handleSend = (text: string) => {
+    lastInputRef.current = text;
+    sendMessage(text);
+  };
+
+  const handleRetry = () => {
+    if (lastInputRef.current) {
+      sendMessage(lastInputRef.current);
+    }
+  };
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+            }
+          })}
+        </div>
+      ))}
+
+      {error && (
+        <div style={{ color: "red" }}>
+          <p>{error.message}</p>
+          <button onClick={handleRetry}>Retry</button>
+        </div>
+      )}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          handleSend(input.value);
+          input.value = "";
+        }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+:::note
+When `sendMessage` is called for a retry, it clears the previous `error` and creates a new user message + empty assistant message. If you want to avoid duplicate user messages on retry, remove the failed pair first via `setMessages`.
+:::
+
+## Handling Specific HTTP Status Codes
+
+The error message includes the HTTP status code and status text. You can parse it to handle specific cases:
+
+```tsx
+useChat({
+  api: "/chat",
+  onError: (error) => {
+    if (error.message.includes("401")) {
+      // Redirect to login
+      window.location.href = "/login";
+    } else if (error.message.includes("429")) {
+      // Rate limited
+      toast.error("Too many requests. Please wait a moment.");
+    }
+  },
+});
+```

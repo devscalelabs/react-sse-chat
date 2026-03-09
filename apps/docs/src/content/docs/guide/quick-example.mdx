@@ -26,7 +26,15 @@ function Chat() {
     <div>
       {messages.map((msg) => (
         <div key={msg.id}>
-          <strong>{msg.role}:</strong> {msg.content}
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+              case "tool_call":
+                return <em key={i}>[Calling {part.tool_name}...]</em>;
+            }
+          })}
         </div>
       ))}
 
@@ -48,19 +56,37 @@ function Chat() {
 }
 ```
 
+## Loading Existing Chat Data
+
+Use `initialMessages` to prepopulate the chat with existing conversation history:
+
+```tsx
+const savedMessages = await fetchChatHistory(sessionId);
+
+const { messages, sendMessage } = useChat({
+  api: "/chat",
+  initialMessages: savedMessages,
+});
+```
+
+This is optional — if omitted, the chat starts empty.
+
 ## What the Hook Handles
 
 That single `useChat` call takes care of:
 
 - Creating user and assistant messages
 - Streaming the response via SSE
-- Parsing `text_delta` events and appending content
+- Parsing `text_delta` events and appending to structured `parts`
 - Abort/stop support
 - Error state management
 
 ## Next Steps
 
+- [Initial Messages](/features/initial-messages) — prepopulate the chat with existing conversation history
+- [Error Handling](/features/error-handling) — handle errors and implement retry
+- [Markdown Rendering](/features/markdown-rendering) — render AI responses as Markdown
+- [Auto-scroll](/features/auto-scroll) — scroll to the latest message during streaming
 - [API Reference](/reference/api-reference) — full list of options and return values
-- [SSE Format](/extending/sse-format) — what your backend needs to emit
 - [Custom Event Handling](/extending/custom-events) — handle `tool_call` and other event types
 - [Cookbook](/cookbook/fastapi-agents) — full-stack examples

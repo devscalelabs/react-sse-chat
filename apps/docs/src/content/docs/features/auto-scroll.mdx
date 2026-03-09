@@ -1,0 +1,164 @@
+---
+title: Auto-scroll
+description: Automatically scroll to the latest message as the assistant streams a response.
+sidebar:
+  order: 6
+---
+
+Chat UIs should scroll to the bottom as new content arrives. Since `useChat` is a hook-only library, you implement scrolling in your component.
+
+## Basic Auto-scroll
+
+Use a ref at the bottom of the message list and scroll to it whenever `messages` changes:
+
+```tsx
+import { useEffect, useRef } from "react";
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={{ marginBottom: "0.5rem" }}>
+            <strong>{msg.role}:</strong>
+            {msg.parts.map((part, i) => {
+              switch (part.type) {
+                case "text":
+                  return <span key={i}>{part.text}</span>;
+              }
+            })}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+        style={{ padding: "1rem" }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Scroll Only When at Bottom
+
+If the user scrolls up to read earlier messages, auto-scroll should stop. Resume when they scroll back to the bottom:
+
+```tsx
+import { useCallback, useEffect, useRef } from "react";
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const shouldScrollRef = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Consider "at bottom" if within 100px of the bottom
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    shouldScrollRef.current = atBottom;
+  }, []);
+
+  useEffect(() => {
+    if (shouldScrollRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        style={{ flex: 1, overflowY: "auto", padding: "1rem" }}
+      >
+        {messages.map((msg) => (
+          <div key={msg.id} style={{ marginBottom: "0.5rem" }}>
+            <strong>{msg.role}:</strong>
+            {msg.parts.map((part, i) => {
+              switch (part.type) {
+                case "text":
+                  return <span key={i}>{part.text}</span>;
+              }
+            })}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+        style={{ padding: "1rem" }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+## Why `messages` as Dependency?
+
+During streaming, `appendText` updates the last message on every `text_delta` event. Each update produces a new `messages` array reference, which triggers the `useEffect`. This gives you smooth, continuous scrolling as tokens arrive — not just when a new message is added.
+
+## Performance Tip
+
+If `scrollIntoView` causes jank during fast streaming, switch from `"smooth"` to `"instant"`:
+
+```tsx
+bottomRef.current?.scrollIntoView({ behavior: "instant" });
+```
+
+Or throttle the scroll with `requestAnimationFrame`:
+
+```tsx
+const rafRef = useRef<number>();
+
+useEffect(() => {
+  if (!shouldScrollRef.current) return;
+
+  cancelAnimationFrame(rafRef.current!);
+  rafRef.current = requestAnimationFrame(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "instant" });
+  });
+}, [messages]);
+```
+
+This ensures at most one scroll per frame, even if `messages` updates faster.

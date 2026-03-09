@@ -15,7 +15,7 @@ Without a library, connecting a React frontend to an SSE-based AI backend requir
 2. **Decode chunks** using `TextDecoder`, handling partial chunks that arrive split across multiple reads
 3. **Parse `data:` lines** from the SSE format, skipping comment lines and handling the `[DONE]` signal
 4. **Parse JSON** from each line, gracefully handling malformed payloads
-5. **Manage React state** for messages — creating user messages, creating assistant messages, and appending streamed content token by token
+5. **Manage React state** for messages — creating user messages, creating assistant messages, and appending streamed content as structured parts
 6. **Handle abort/cancel** via `AbortController` so users can stop generation
 7. **Handle errors** from the network, the stream, and the JSON parsing layer
 

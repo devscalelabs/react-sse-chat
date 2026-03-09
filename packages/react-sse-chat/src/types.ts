@@ -1,13 +1,31 @@
 import type { Dispatch, SetStateAction } from "react";
 
 // ---------------------------------------------------------------------------
+// Content Parts
+// ---------------------------------------------------------------------------
+
+export interface TextPart {
+  type: "text";
+  text: string;
+}
+
+export interface ToolCallPart {
+  type: "tool_call";
+  tool_name: string;
+  argument: string;
+}
+
+/** Built-in content part types provided by the library. */
+export type ContentPart = TextPart | ToolCallPart;
+
+// ---------------------------------------------------------------------------
 // Message
 // ---------------------------------------------------------------------------
 
-export interface Message {
+export interface Message<TPart extends { type: string } = ContentPart> {
   id: string;
   role: "user" | "assistant";
-  content: string;
+  parts: TPart[];
 }
 
 // ---------------------------------------------------------------------------
@@ -32,21 +50,27 @@ export type SSEEvent = TextDeltaEvent | ToolCallEvent;
 // mutate message state from within their handler.
 // ---------------------------------------------------------------------------
 
-export interface EventHelpers {
-  /** Append a string to the current assistant message's content. */
-  appendContent: (delta: string) => void;
+export interface EventHelpers<TPart extends { type: string } = ContentPart> {
+  /** Append a text delta to the last text part of the current assistant message, or create a new text part. */
+  appendText: (delta: string) => void;
+
+  /** Append a new content part to the current assistant message. */
+  appendPart: (part: TPart) => void;
 
   /** Direct access to the messages state setter for advanced use-cases. */
-  setMessages: Dispatch<SetStateAction<Message[]>>;
+  setMessages: Dispatch<SetStateAction<Message<TPart>[]>>;
 }
 
 // ---------------------------------------------------------------------------
 // Hook Options
 // ---------------------------------------------------------------------------
 
-export interface UseChatOptions {
+export interface UseChatOptions<TPart extends { type: string } = ContentPart> {
   /** SSE endpoint URL. */
   api: string;
+
+  /** Initial messages to prepopulate the chat (e.g. from a database or previous session). */
+  initialMessages?: Message<TPart>[];
 
   /** Extra headers merged into every fetch request. */
   headers?: Record<string, string>;
@@ -59,13 +83,13 @@ export interface UseChatOptions {
    * default `text_delta` handling — giving you full control over how events
    * are mapped to message state.
    */
-  onEvent?: (event: SSEEvent, helpers: EventHelpers) => void;
+  onEvent?: (event: SSEEvent, helpers: EventHelpers<TPart>) => void;
 
   /** Called when the assistant message is complete (stream ended). */
-  onFinish?: (messages: Message[]) => void;
+  onFinish?: (messages: Message<TPart>[]) => void;
 
   /** Called whenever a new complete message (user or assistant) is added. */
-  onMessage?: (message: Message) => void;
+  onMessage?: (message: Message<TPart>) => void;
 
   /** Called when a fetch or stream error occurs. */
   onError?: (error: Error) => void;
@@ -75,9 +99,9 @@ export interface UseChatOptions {
 // Hook Return
 // ---------------------------------------------------------------------------
 
-export interface UseChatReturn {
+export interface UseChatReturn<TPart extends { type: string } = ContentPart> {
   /** Chronological list of messages in the conversation. */
-  messages: Message[];
+  messages: Message<TPart>[];
 
   /** `true` while the assistant is streaming a response. */
   isLoading: boolean;
@@ -92,5 +116,5 @@ export interface UseChatReturn {
   stop: () => void;
 
   /** Direct setter for programmatic message manipulation (clear, prepopulate, etc.). */
-  setMessages: Dispatch<SetStateAction<Message[]>>;
+  setMessages: Dispatch<SetStateAction<Message<TPart>[]>>;
 }

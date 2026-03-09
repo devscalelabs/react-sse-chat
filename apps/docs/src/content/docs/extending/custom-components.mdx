@@ -9,7 +9,7 @@ sidebar:
 
 ## Custom Message Bubble
 
-Style messages differently based on role:
+Style messages differently based on role, and render each content part:
 
 ```tsx
 import { useChat } from "@devscalelabs/react-sse-chat";
@@ -29,7 +29,18 @@ function MessageBubble({ message }: { message: Message }) {
         maxWidth: "70%",
       }}
     >
-      {message.content}
+      {message.parts.map((part, i) => {
+        switch (part.type) {
+          case "text":
+            return <span key={i}>{part.text}</span>;
+          case "tool_call":
+            return (
+              <em key={i} style={{ opacity: 0.7 }}>
+                [Calling {part.tool_name}...]
+              </em>
+            );
+        }
+      })}
     </div>
   );
 }

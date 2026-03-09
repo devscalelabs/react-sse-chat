@@ -1,0 +1,100 @@
+---
+title: Managing Messages
+description: Clear, delete, edit, and programmatically control messages with setMessages.
+sidebar:
+  order: 2
+---
+
+`useChat` returns a `setMessages` function — the standard React state setter for the messages array. Use it for any programmatic manipulation beyond what the streaming lifecycle provides.
+
+## Clearing the Conversation
+
+Reset the chat to an empty state:
+
+```tsx
+const { messages, setMessages, sendMessage } = useChat({ api: "/chat" });
+
+function handleNewChat() {
+  setMessages([]);
+}
+```
+
+```tsx
+<button onClick={handleNewChat}>New Chat</button>
+```
+
+## Deleting a Message
+
+Remove a specific message by filtering it out:
+
+```tsx
+function handleDelete(messageId: string) {
+  setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+}
+```
+
+```tsx
+{messages.map((msg) => (
+  <div key={msg.id}>
+    {msg.parts.map((part, i) => {
+      switch (part.type) {
+        case "text":
+          return <span key={i}>{part.text}</span>;
+      }
+    })}
+    <button onClick={() => handleDelete(msg.id)}>Delete</button>
+  </div>
+))}
+```
+
+## Editing a Message
+
+Update the parts of a specific message:
+
+```tsx
+function handleEdit(messageId: string, newText: string) {
+  setMessages((prev) =>
+    prev.map((msg) =>
+      msg.id === messageId
+        ? { ...msg, parts: [{ type: "text", text: newText }] }
+        : msg,
+    ),
+  );
+}
+```
+
+## Prepending a System-Style Message
+
+Insert a message at the beginning of the conversation:
+
+```tsx
+function addWelcomeMessage() {
+  setMessages((prev) => [
+    {
+      id: "welcome",
+      role: "assistant",
+      parts: [{ type: "text", text: "Hello! How can I help you today?" }],
+    },
+    ...prev,
+  ]);
+}
+```
+
+## Functional Updates
+
+`setMessages` supports functional updates — the same pattern as React's `useState` setter. Always use functional updates when the new state depends on the previous state:
+
+```tsx
+// Good — uses previous state
+setMessages((prev) => prev.filter((msg) => msg.role !== "assistant"));
+
+// Bad — may use stale state
+setMessages(messages.filter((msg) => msg.role !== "assistant"));
+```
+
+## Important Notes
+
+- `setMessages` triggers a re-render with the new messages array
+- Changes made via `setMessages` are **not** sent to the backend — it only modifies local state
+- `sendMessage` is a no-op while a stream is in progress. If you need to clear messages and send a new one, call `stop()` first, then `setMessages([])`, then `sendMessage(text)` on the next render
+- The `onMessage` and `onFinish` callbacks are **not** triggered by `setMessages` — they only fire during the streaming lifecycle

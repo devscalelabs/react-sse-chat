@@ -1,0 +1,141 @@
+---
+title: Initial Messages
+description: Prepopulate the chat with existing conversation history.
+sidebar:
+  order: 1
+---
+
+Use the `initialMessages` option to seed the chat with existing messages — for example, when restoring a previous conversation from a database or localStorage.
+
+## Basic Usage
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+import type { Message } from "@devscalelabs/react-sse-chat";
+
+const savedMessages: Message[] = [
+  {
+    id: "msg_1",
+    role: "user",
+    parts: [{ type: "text", text: "What is SSE?" }],
+  },
+  {
+    id: "msg_2",
+    role: "assistant",
+    parts: [
+      {
+        type: "text",
+        text: "SSE (Server-Sent Events) is a standard for pushing real-time updates from a server to a browser over HTTP.",
+      },
+    ],
+  },
+];
+
+function Chat() {
+  const { messages, sendMessage } = useChat({
+    api: "/chat",
+    initialMessages: savedMessages,
+  });
+
+  // messages starts with the two saved messages above
+  // new messages are appended after them
+}
+```
+
+## Loading from an API
+
+Use `useQuery` to fetch chat history, then pass it to `useChat` once the data is ready:
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { useChat } from "@devscalelabs/react-sse-chat";
+import type { Message } from "@devscalelabs/react-sse-chat";
+
+function Chat({ sessionId }: { sessionId: string }) {
+  const { data, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ["chat-history", sessionId],
+    queryFn: async (): Promise<Message[]> => {
+      const res = await fetch(`/api/history/${sessionId}`);
+      const data = await res.json();
+      return data.messages;
+    },
+  });
+
+  if (isHistoryLoading) return <div>Loading chat history...</div>;
+
+  return <ChatUI initialMessages={data} />;
+}
+
+function ChatUI({ initialMessages }: { initialMessages?: Message[] }) {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+    initialMessages,
+  });
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <div key={msg.id}>
+          <strong>{msg.role}:</strong>
+          {msg.parts.map((part, i) => {
+            switch (part.type) {
+              case "text":
+                return <span key={i}>{part.text}</span>;
+            }
+          })}
+        </div>
+      ))}
+
+      {isLoading && <button onClick={stop}>Stop</button>}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.namedItem("message") as HTMLInputElement;
+          sendMessage(input.value);
+          input.value = "";
+        }}
+      >
+        <input name="message" placeholder="Type a message..." />
+        <button type="submit" disabled={isLoading}>Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+:::tip
+Mount `ChatUI` only after the query resolves. Since `initialMessages` is used as the initial value of `useState`, it is only read on the first render — changes after mount are ignored.
+:::
+
+## Switching Conversations
+
+To switch between conversations, use React's `key` prop to force a remount:
+
+```tsx
+function App() {
+  const [sessionId, setSessionId] = useState("session_1");
+
+  return (
+    <div>
+      <button onClick={() => setSessionId("session_1")}>Chat 1</button>
+      <button onClick={() => setSessionId("session_2")}>Chat 2</button>
+
+      {/* key forces a fresh mount when sessionId changes */}
+      <Chat key={sessionId} sessionId={sessionId} />
+    </div>
+  );
+}
+```
+
+When the `key` changes, React unmounts the old component and mounts a new one — reinitializing `useChat` with the new `initialMessages`.
+
+## Without Initial Messages
+
+`initialMessages` is fully optional. If omitted, the chat starts with an empty array:
+
+```tsx
+// These are equivalent
+const chat = useChat({ api: "/chat" });
+const chat = useChat({ api: "/chat", initialMessages: [] });
+```

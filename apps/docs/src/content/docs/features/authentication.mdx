@@ -1,0 +1,124 @@
+---
+title: Authentication
+description: Pass authentication tokens and API keys via the headers option.
+sidebar:
+  order: 4
+---
+
+Use the `headers` option to pass authentication credentials with every request.
+
+## Bearer Token (JWT)
+
+```tsx
+const { messages, sendMessage } = useChat({
+  api: "/chat",
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
+```
+
+## API Key
+
+```tsx
+const { messages, sendMessage } = useChat({
+  api: "/chat",
+  headers: {
+    "X-API-Key": apiKey,
+  },
+});
+```
+
+## Dynamic Token with React Query
+
+If your token refreshes (e.g. via an auth provider), pass the latest value to `useChat`. Since `headers` is in the hook's dependency array, the `sendMessage` function will always use the current token:
+
+```tsx
+import { useAuth } from "./auth"; // your auth provider
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const { token } = useAuth();
+
+  const { messages, sendMessage } = useChat({
+    api: "/chat",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  // sendMessage always uses the latest token
+}
+```
+
+## Session ID via Body
+
+For session-based authentication or multi-tenant setups, pass identifiers via the `body` option instead of headers:
+
+```tsx
+const { messages, sendMessage } = useChat({
+  api: "/chat",
+  body: {
+    session_id: sessionId,
+    tenant_id: tenantId,
+  },
+});
+```
+
+The `body` fields are merged into the POST body alongside `message`:
+
+```json
+{
+  "message": "user text",
+  "session_id": "abc123",
+  "tenant_id": "org_456"
+}
+```
+
+## CORS Considerations
+
+If your frontend and backend are on different origins, the backend must allow the custom headers via CORS:
+
+```ts
+// Hono example
+import { cors } from "hono/cors";
+
+app.use("/*", cors({
+  origin: "http://localhost:5173",
+  allowHeaders: ["Content-Type", "Authorization"],
+}));
+```
+
+```python
+# FastAPI example
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:5173"],
+  allow_headers=["Content-Type", "Authorization"],
+)
+```
+
+Without this, the browser will block the request with a CORS error.
+
+## Handling 401 Responses
+
+Combine `headers` with `onError` to handle expired tokens:
+
+```tsx
+const { messages, sendMessage } = useChat({
+  api: "/chat",
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+  onError: (error) => {
+    if (error.message.includes("401")) {
+      // Token expired — redirect to login or refresh
+      refreshToken();
+    }
+  },
+});
+```
+
+See [Error Handling](/features/error-handling) for more error patterns.
