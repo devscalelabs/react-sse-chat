@@ -2,7 +2,7 @@
 title: SSE Format
 description: The Server-Sent Events format your backend needs to emit.
 sidebar:
-  order: 2
+  order: 3
 ---
 
 ## Expected Format
@@ -41,7 +41,7 @@ Emitted when the AI invokes a tool:
 {"type": "tool_call", "tool_name": "search_web", "argument": "{\"query\": \"...\" }"}
 ```
 
-These are **not** handled by default. Use the [`onEvent` callback](/custom-events) to process them.
+These are **not** handled by default. Use the [`onEvent` callback](/extending/custom-events) to process them.
 
 ## HTTP Request
 

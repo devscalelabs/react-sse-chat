@@ -1,0 +1,46 @@
+---
+title: Problem to Solve
+description: The pain points of building streaming AI chat UIs that react-sse-chat addresses.
+sidebar:
+  order: 2
+---
+
+Building a streaming chat UI on top of Server-Sent Events sounds simple — until you actually do it. Here's what you run into.
+
+## The Manual Approach
+
+Without a library, connecting a React frontend to an SSE-based AI backend requires you to:
+
+1. **Make a `fetch` POST request** and access the `ReadableStream` from the response body
+2. **Decode chunks** using `TextDecoder`, handling partial chunks that arrive split across multiple reads
+3. **Parse `data:` lines** from the SSE format, skipping comment lines and handling the `[DONE]` signal
+4. **Parse JSON** from each line, gracefully handling malformed payloads
+5. **Manage React state** for messages — creating user messages, creating assistant messages, and appending streamed content token by token
+6. **Handle abort/cancel** via `AbortController` so users can stop generation
+7. **Handle errors** from the network, the stream, and the JSON parsing layer
+
+That's a lot of boilerplate for every project, and it's easy to get wrong.
+
+## Common Pitfalls
+
+| Problem | What happens |
+|---|---|
+| Partial chunks | A single `read()` call may contain half a JSON line. Naive splitting on `\n` breaks. |
+| State closure bugs | Appending to messages inside `for await` with stale closures causes missing tokens. |
+| Missing cleanup | Forgetting to abort on unmount leaks connections and causes "state update on unmounted component" warnings. |
+| Duplicated logic | Every project re-implements the same streaming + parsing + state management code. |
+
+## What react-sse-chat Does
+
+`useChat` wraps all of this into a single hook:
+
+```tsx
+const { messages, isLoading, sendMessage, stop } = useChat({
+  api: "/chat",
+});
+```
+
+- The SSE parser handles partial chunks, malformed JSON, and the `[DONE]` signal
+- React state is managed correctly — no stale closures, no missing tokens
+- Abort is wired up automatically — call `stop()` or let it clean up on unmount
+- The API surface is minimal: one hook, a few options, done

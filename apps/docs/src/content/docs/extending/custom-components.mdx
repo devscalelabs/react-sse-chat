@@ -1,0 +1,132 @@
+---
+title: Custom Components
+description: Build custom UI components on top of useChat for tailored chat experiences.
+sidebar:
+  order: 2
+---
+
+`useChat` is intentionally un-opinionated about rendering. It gives you the data and controls — you bring the UI. This page shows common patterns for building custom chat components.
+
+## Custom Message Bubble
+
+Style messages differently based on role:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+import type { Message } from "@devscalelabs/react-sse-chat";
+
+function MessageBubble({ message }: { message: Message }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div
+      style={{
+        alignSelf: isUser ? "flex-end" : "flex-start",
+        background: isUser ? "#3b82f6" : "#e5e7eb",
+        color: isUser ? "#fff" : "#1f2937",
+        padding: "0.75rem 1rem",
+        borderRadius: "1rem",
+        maxWidth: "70%",
+      }}
+    >
+      {message.content}
+    </div>
+  );
+}
+```
+
+## Custom Input Form
+
+Build a chat input with submit-on-enter and a send button:
+
+```tsx
+import { useState } from "react";
+
+function ChatInput({
+  onSend,
+  isLoading,
+}: {
+  onSend: (message: string) => void;
+  isLoading: boolean;
+}) {
+  const [value, setValue] = useState("");
+
+  const handleSubmit = () => {
+    if (!value.trim() || isLoading) return;
+    onSend(value);
+    setValue("");
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
+    >
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Type a message..."
+        disabled={isLoading}
+      />
+      <button type="submit" disabled={isLoading || !value.trim()}>
+        Send
+      </button>
+    </form>
+  );
+}
+```
+
+## Streaming Indicator
+
+Show a typing indicator while the assistant is streaming:
+
+```tsx
+function StreamingIndicator({ isLoading }: { isLoading: boolean }) {
+  if (!isLoading) return null;
+
+  return (
+    <div style={{ display: "flex", gap: "0.25rem", padding: "0.5rem" }}>
+      <span className="dot" />
+      <span className="dot" />
+      <span className="dot" />
+    </div>
+  );
+}
+```
+
+## Putting It Together
+
+Compose your custom components with `useChat`:
+
+```tsx
+import { useChat } from "@devscalelabs/react-sse-chat";
+
+function Chat() {
+  const { messages, isLoading, sendMessage, stop } = useChat({
+    api: "/chat",
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.5rem", padding: "1rem" }}>
+        {messages.map((msg) => (
+          <MessageBubble key={msg.id} message={msg} />
+        ))}
+        <StreamingIndicator isLoading={isLoading} />
+      </div>
+
+      {isLoading && (
+        <button onClick={stop} style={{ alignSelf: "center" }}>
+          Stop generating
+        </button>
+      )}
+
+      <ChatInput onSend={sendMessage} isLoading={isLoading} />
+    </div>
+  );
+}
+```
+
+Since `useChat` returns standard React state (`messages`, `isLoading`) and simple callbacks (`sendMessage`, `stop`, `setMessages`), you can integrate it with any component library — Radix, shadcn/ui, Chakra, Material UI, or plain HTML.

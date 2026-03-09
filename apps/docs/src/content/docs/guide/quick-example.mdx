@@ -1,19 +1,17 @@
 ---
-title: Getting Started
-description: Install and start using @devscalelabs/react-sse-chat in minutes.
+title: Quick Example
+description: Install and start using react-sse-chat in under a minute.
 sidebar:
-  order: 1
+  order: 3
 ---
-
-A lightweight React hook for consuming Server-Sent Events (SSE) from AI chat backends. Zero runtime dependencies — uses native `fetch` + `ReadableStream` under the hood.
 
 ## Install
 
 ```bash
-npm install @devscalelabs/react-sse-chat
+pnpm add @devscalelabs/react-sse-chat
 ```
 
-## Quick Start
+## Minimal Chat Component
 
 ```tsx
 import { useChat } from "@devscalelabs/react-sse-chat";
@@ -50,7 +48,9 @@ function Chat() {
 }
 ```
 
-That's it. The hook handles:
+## What the Hook Handles
+
+That single `useChat` call takes care of:
 
 - Creating user and assistant messages
 - Streaming the response via SSE
@@ -60,7 +60,7 @@ That's it. The hook handles:
 
 ## Next Steps
 
-- [API Reference](/reference/api-reference) — Full list of options and return values
-- [SSE Format](/guide/sse-format) — What your backend needs to emit
-- [Custom Event Handling](/guide/custom-events) — Handle `tool_call` and other event types
-- [Cookbook](/cookbook/fastapi-agents) — Full-stack examples
+- [API Reference](/reference/api-reference) — full list of options and return values
+- [SSE Format](/extending/sse-format) — what your backend needs to emit
+- [Custom Event Handling](/extending/custom-events) — handle `tool_call` and other event types
+- [Cookbook](/cookbook/fastapi-agents) — full-stack examples
