@@ -5,6 +5,8 @@
   "scripts": {
     "build": "pnpm --filter @devscalelabs/react-sse-chat build",
     "dev": "pnpm --filter @devscalelabs/react-sse-chat dev",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build",
     "typecheck": "pnpm -r typecheck"
   },
 

@@ -14,6 +14,7 @@ export default defineConfig({
           href: "https://github.com/devscalelabs/react-sse-chat",
         },
       ],
+      customCss: ["./src/styles/custom.css"],
       sidebar: [
         {
           label: "Guide",
